@@ -31,7 +31,7 @@ def raw():
                     print("[PDTORDM] %s - %s - %s" %(unique_id, ip_address, user_agent))
                     print("[PDTORDM] %s - %s" %(unique_id, method))
                     req_rdm = handle_proto_data(proto, unique_id)
-                    req = requests.post(url="http://"+RDM_URL"/raw", json=req_rdm, headers=headers)
+                    req = requests.post(url="http://"+RDM_URL+"/raw", json=req_rdm, headers=headers)
                     if req.status_code not in [200,201]:
                        print("[PDTORDM] Status code: {}".format(req.status_code))
         else:
