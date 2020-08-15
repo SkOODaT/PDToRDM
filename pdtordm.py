@@ -15,6 +15,10 @@ headers = {
     "Authorization": "Bearer " + AUTH_TOKEN
 }
 
+@app.route('/')
+def homepage():
+    return "Python PDToRDM Connector V1.1"
+
 @app.route("/raw", methods=["POST"])
 def raw():
     try:
