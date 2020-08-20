@@ -1,6 +1,17 @@
 from flask import Flask, request
 import requests, os
 
+import base64
+from pogoprotos.networking.responses.get_map_objects_response_pb2 import GetMapObjectsResponse #106
+from pogoprotos.networking.responses.encounter_response_pb2 import EncounterResponse #102
+from pogoprotos.networking.responses.get_holo_inventory_response_pb2 import GetHoloInventoryResponse #4
+from pogoprotos.networking.responses.fort_search_response_pb2 import FortSearchResponse #101
+from pogoprotos.networking.responses.fort_details_response_pb2 import FortDetailsResponse #104
+from pogoprotos.networking.responses.gym_get_info_response_pb2 import GymGetInfoResponse # 156
+from pogoprotos.networking.responses.get_player_response_pb2 import GetPlayerResponse #2
+from google.protobuf.json_format import MessageToDict
+import pprint
+
 app = Flask(__name__, static_url_path='')
 
 import logging
@@ -30,6 +41,7 @@ def raw():
         for proto in data:
             method = proto["type"]
             if method == 2 or method == 106 or method == 102 or method == 104 or method == 101 or method == 156:
+                #decode_raw_data(proto)
                 req_rdm = handle_proto_data(proto, unique_id)
                 try:
                     req = requests.post(url="http://"+RDM_URL+"/raw", json=req_rdm, headers=headers)
@@ -60,6 +72,15 @@ def handle_proto_data(proto, unique_id):
     req_rdm["uuid"] = unique_id
 
     return req_rdm
+
+def decode_raw_data(proto):
+    for datas in proto:
+        Decode = base64.b64decode(proto['payload'])
+        if proto["type"] == 2:
+            obj = GetPlayerResponse()
+            obj.ParseFromString(Decode)
+            object = MessageToDict(obj)
+            pprint.pprint(object)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port='5000', debug=True)
