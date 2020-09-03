@@ -1,5 +1,6 @@
 from flask import Flask, request
 import requests, os
+import urllib3
 
 import base64
 from pogoprotos.networking.responses.get_map_objects_response_pb2 import GetMapObjectsResponse #106
@@ -41,7 +42,7 @@ def raw():
         for proto in data:
             method = proto["type"]
             if method == 2 or method == 106 or method == 102 or method == 104 or method == 101 or method == 156:
-                #decode_raw_data(proto)
+                #decode(proto, method, unique_id)
                 req_rdm = handle_proto_data(proto, unique_id)
                 try:
                     req = requests.post(url="http://"+RDM_URL+"/raw", json=req_rdm, headers=headers)
@@ -73,14 +74,33 @@ def handle_proto_data(proto, unique_id):
 
     return req_rdm
 
-def decode_raw_data(proto):
-    for datas in proto:
-        Decode = base64.b64decode(proto['payload'])
-        if proto["type"] == 2:
-            obj = GetPlayerResponse()
+def decode(proto, method, unique_id):
+    try:
+        if method == 106 and unique_id == 'SMG928W8':
+            Decode = base64.b64decode(proto['payload'])
+            obj = GetMapObjectsResponse()
             obj.ParseFromString(Decode)
             object = MessageToDict(obj)
-            pprint.pprint(object)
+            mapCells = object.get('mapCells')
+            for forts in mapCells:
+                fort = forts.get('forts')
+                if fort:
+                    type = str()
+                    for type in fort:
+                        type = type.get('type')
+                    if type != 'CHECKPOINT':
+                        pprint.pprint(fort)
+
+    except urllib3.exceptions.ProtocolError as de:
+        retry_error = True
+        print("[GDSTORDM] DECODE ERROR:", de)
+    except requests.exceptions.ConnectionError as ce:
+        retry_error = True
+        print("[GDSTORDM] Requests ERROR:", ce)
+    except TypeError as t:
+        print("[GDSTORDM] TypeError ERROR: {}".format(t))
+    except AssertionError as a:
+        print("[GDSTORDM] AssertionError ERROR: {}".format(a))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port='5000', debug=True)
