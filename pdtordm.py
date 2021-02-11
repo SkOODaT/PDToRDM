@@ -3,13 +3,18 @@ import requests, os
 import urllib3
 
 import base64
-from pogoprotos.networking.responses.get_map_objects_response_pb2 import GetMapObjectsResponse #106
-from pogoprotos.networking.responses.encounter_response_pb2 import EncounterResponse #102
-from pogoprotos.networking.responses.get_holo_inventory_response_pb2 import GetHoloInventoryResponse #4
-from pogoprotos.networking.responses.fort_search_response_pb2 import FortSearchResponse #101
-from pogoprotos.networking.responses.fort_details_response_pb2 import FortDetailsResponse #104
-from pogoprotos.networking.responses.gym_get_info_response_pb2 import GymGetInfoResponse # 156
-from pogoprotos.networking.responses.get_player_response_pb2 import GetPlayerResponse #2
+
+from pogoprotos.POGOProtos.Rpc_pb2 import GetMapObjectsOutProto, EncounterOutProto, GetHoloholoInventoryOutProto, \
+     FortSearchOutProto, FortDetailsOutProto, GymGetInfoOutProto, GetPlayerOutProto
+
+#from pogoprotos.networking.responses.get_map_objects_response_pb2 import GetMapObjectsResponse #106
+#from pogoprotos.networking.responses.encounter_response_pb2 import EncounterResponse #102
+#from pogoprotos.networking.responses.get_holo_inventory_response_pb2 import GetHoloInventoryResponse #4
+#from pogoprotos.networking.responses.fort_search_response_pb2 import FortSearchResponse #101
+#from pogoprotos.networking.responses.fort_details_response_pb2 import FortDetailsResponse #104
+#from pogoprotos.networking.responses.gym_get_info_response_pb2 import GymGetInfoResponse # 156
+#from pogoprotos.networking.responses.get_player_response_pb2 import GetPlayerResponse #2
+
 from google.protobuf.json_format import MessageToDict
 import pprint
 
@@ -78,12 +83,12 @@ def decode(proto, method, unique_id):
     try:
         if method == 106 and unique_id == 'SMG928W8':
             Decode = base64.b64decode(proto['payload'])
-            obj = GetMapObjectsResponse()
+            obj = GetMapObjectsOutProto()
             obj.ParseFromString(Decode)
             object = MessageToDict(obj)
             mapCells = object.get('mapCells')
             for forts in mapCells:
-                fort = forts.get('forts')
+                fort = forts.get('fort')
                 if fort:
                     type = str()
                     for type in fort:
