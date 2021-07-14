@@ -3,9 +3,8 @@ import requests, os
 import urllib3
 
 import base64
-
 from pogoprotos.POGOProtos.Rpc_pb2 import GetMapObjectsOutProto, EncounterOutProto, GetHoloholoInventoryOutProto, \
-     FortSearchOutProto, FortDetailsOutProto, GymGetInfoOutProto, GetPlayerOutProto
+     FortSearchOutProto, FortDetailsOutProto, GymGetInfoOutProto, GetPlayerOutProto, ItemProto, InventoryItemProto, InventoryDeltaProto, HoloInventoryItemProto, Item
 
 #from pogoprotos.networking.responses.get_map_objects_response_pb2 import GetMapObjectsResponse #106
 #from pogoprotos.networking.responses.encounter_response_pb2 import EncounterResponse #102
@@ -45,15 +44,21 @@ def raw():
 
     if isinstance(data, list):
         for proto in data:
+            itemID, count = decode(proto, unique_id)
+            lureInfo = ''
+            if itemID == 'ITEM_TROY_DISK' or itemID == 'ITEM_TROY_DISK_GLACIAL' or itemID == 'ITEM_TROY_DISK_MOSSY' or itemID == 'ITEM_TROY_DISK_MAGNETIC' or itemID == 'ITEM_TROY_DISK_RAINY':
+                #print(itemID, count)
+                lureInfo = unique_id+' '+itemID+' '+str(count)
+            #print(lureInfo)
             method = proto["type"]
-            if method == 2 or method == 106 or method == 102 or method == 104 or method == 101 or method == 156:
+            if method == 2 or method == 4 or method == 106 or method == 102 or method == 145 or method == 104 or method == 101 or method == 156:
                 #decode(proto, method, unique_id)
                 req_rdm = handle_proto_data(proto, unique_id)
                 try:
-                    req = requests.post(url="http://"+RDM_URL+"/raw", json=req_rdm, headers=headers)
+                    req = requests.post(url="http://"+RDM_URL+"/raw", json=req_rdm, headers=headers, timeout=1)
                     if req.status_code not in [200,201]:
                        print("[PDTORDM] Status code: {}".format(req.status_code))
-                    print("[PDTORDM] /RAW", unique_id, ip_address, method)
+                    print("[PDTORDM] /RAW", unique_id, ip_address, method, lureInfo)
                 except urllib3.exceptions.ProtocolError as de:
                     retry_error = True
                     print("[PDTORDM] RAW ERROR:", de)
@@ -79,22 +84,26 @@ def handle_proto_data(proto, unique_id):
 
     return req_rdm
 
-def decode(proto, method, unique_id):
+def decode(proto, unique_id):
+    #if unique_id == 'SMA520W':
+    itemID = None 
+    count = None
     try:
-        if method == 106 and unique_id == 'SMG928W8':
-            Decode = base64.b64decode(proto['payload'])
-            obj = GetMapObjectsOutProto()
+        Decode = base64.b64decode(proto['payload'])
+        if proto["type"] == 4:
+            obj = GetHoloholoInventoryOutProto()
             obj.ParseFromString(Decode)
             object = MessageToDict(obj)
-            mapCells = object.get('mapCells')
-            for forts in mapCells:
-                fort = forts.get('fort')
-                if fort:
-                    type = str()
-                    for type in fort:
-                        type = type.get('type')
-                    if type != 'CHECKPOINT':
-                        pprint.pprint(fort)
+            inventoryDelta = object.get('inventoryDelta')
+            inventoryItem = inventoryDelta.get('inventoryItem')
+            for data in inventoryItem:
+                inventoryItemData = data.get('inventoryItemData')
+                item = inventoryItemData.get('item')
+                if item is not None:
+                    itemID = item.get('itemId')
+                    count = item.get('count')
+        #print(itemID, count)
+        return itemID, count
 
     except urllib3.exceptions.ProtocolError as de:
         retry_error = True
@@ -106,6 +115,34 @@ def decode(proto, method, unique_id):
         print("[GDSTORDM] TypeError ERROR: {}".format(t))
     except AssertionError as a:
         print("[GDSTORDM] AssertionError ERROR: {}".format(a))
+
+#def decode(proto, method, unique_id):
+#    try:
+#        if method == 106 and unique_id == 'SMG928W8':
+#            Decode = base64.b64decode(proto['payload'])
+#            obj = GetMapObjectsOutProto()
+#            obj.ParseFromString(Decode)
+#            object = MessageToDict(obj)
+#            mapCells = object.get('mapCells')
+#            for forts in mapCells:
+#                fort = forts.get('fort')
+#                if fort:
+#                    type = str()
+#                    for type in fort:
+#                        type = type.get('type')
+#                    if type != 'CHECKPOINT':
+#                        pprint.pprint(fort)
+
+#    except urllib3.exceptions.ProtocolError as de:
+#        retry_error = True
+#        print("[GDSTORDM] DECODE ERROR:", de)
+#    except requests.exceptions.ConnectionError as ce:
+#        retry_error = True
+#        print("[GDSTORDM] Requests ERROR:", ce)
+#    except TypeError as t:
+#        print("[GDSTORDM] TypeError ERROR: {}".format(t))
+#    except AssertionError as a:
+#        print("[GDSTORDM] AssertionError ERROR: {}".format(a))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port='5000', debug=True)
